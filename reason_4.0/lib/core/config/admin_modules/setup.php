@@ -61,6 +61,7 @@
 		'kill_session'=>array('file'=>'kill_session.php','class'=>'KillSessionModule'),
 		'show_session'=>array('file'=>'show_session.php','class'=>'ShowSessionModule'),
 		'about_reason'=>array('file'=>'reason_info.php','class'=>'ReasonInfoModule'),
+		'RefreshPageTypesCache'=>array('file'=>'refresh_page_types_cache.php','class'=>'RefreshPageTypesCacheModule'),
 		'Test'=>array('file'=>'test.php','class'=>'TestModule'),
 		'Sharing'=>array('file'=>'sharing.php','class'=>'SharingModule'),
 		'Preview'=>array('file'=>'preview.php','class'=>'PreviewModule'),
@@ -98,13 +99,16 @@
 		'KalturaImport'=>array('file'=>'kaltura_import.php','class'=>'KalturaImportModule'),
 		'MediaImport'=>array('file' => 'media_import.php', 'class'=>'MediaImportModule'),
 		'CustomizeTheme'=>array('file'=>'customize_theme.php','class'=>'CustomizeThemeModule'),
+		'RequestPageType'=>array('file'=>'request_page_type.php','class'=>'RequestPageTypeModule'),
 		'SiteAccessDenied'=>array('file'=>'site_access_denied.php', 'class'=>'SiteAccessDeniedModule'),
 		'Newsletter'=>array('file'=>'newsletter/newsletter.php', 'class'=>'NewsletterModule'),
 		'DeleteRegistrationSlotData'=>array('file'=>'delete_slot_data.php', 'class'=>'DeleteRegistrationSlotDataModule'),
 		'ClearCache'=>array('file'=>'clear_cache.php', 'class'=>'ReasonClearCacheModule'),
+		'FormRecipients'=>array('file'=>'form_recipients.php', 'class'=>'FormRecipientsModule'),
 		'Analytics'=>array('file'=>'analytics.php', 'class'=>'AnalyticsModule'),
 		'AnalyticsAbout'=>array('file'=>'analytics.php', 'class'=>'AnalyticsAboutModule'),
 		'ShareSiteOwnership'=>array('file'=>'share_site_ownership.php', 'class'=>'ShareSiteOwnershipModule'),
+		'BorrowThis'=>array('file'=>'borrow_this.php', 'class'=>'BorrowThisModule'),
 );
 
 if (reason_file_exists('config/admin_modules/setup_local.php'))

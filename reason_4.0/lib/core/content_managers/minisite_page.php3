@@ -10,9 +10,11 @@
 reason_include_once( 'content_managers/parent_child.php3' );
 reason_include_once('classes/url_manager.php');
 reason_include_once('classes/page_types.php');
+reason_include_once( 'config/page_type_sets/setup.php' );
 reason_include_once('minisite_templates/page_types.php');
 reason_require_once( 'minisite_templates/page_types.php' );
 reason_include_once( 'classes/plasmature/head_items.php' );
+reason_include_once( 'classes/plasmature/page_type_picker.php' );
 include_once( DISCO_INC . 'plugins/input_limiter/input_limiter.php' );
 
 $GLOBALS[ '_content_manager_class_names' ][ basename( __FILE__) ] = 'MinisitePageManager';
@@ -26,6 +28,7 @@ class MinisitePageManager extends parent_childManager
 	var $multiple_root_nodes_allowed = false;
 	var $root_node_description_text = '-- Home Page --';
 	var $parent_sort_order = 'sortable.sort_order ASC';
+	var $box_class = 'stackedBox';
 	
 	function init( $externally_set_up = false)
 	{
@@ -48,6 +51,7 @@ class MinisitePageManager extends parent_childManager
 			$this->head_items->add_javascript(WEB_JAVASCRIPT_PATH.'content_managers/page.js');
 		}
 		$this->head_items->add_stylesheet(REASON_ADMIN_CSS_DIRECTORY.'content_managers/minisite_page.css');
+		$this->head_items->add_javascript(WEB_JAVASCRIPT_PATH.'content_managers/page.js');
 	}
 	
 	/**
@@ -117,11 +121,28 @@ class MinisitePageManager extends parent_childManager
 			return array();
 	}
 	
+	function get_deprecated_page_types()
+	{
+		$deprecated_page_types = array();
+		$deprecated_modules = $this->_get_deprecated_modules();
+		if(!empty($deprecated_modules))
+		{
+			$pt = get_reason_page_types();
+			$deprecated_page_types = $pt->get_page_type_names_that_use_module($deprecated_modules);
+		}
+		return $deprecated_page_types;
+	}
+	
 	function alter_data()
 	{
-		$fields = array('name', 'link_name', 'parent_id', 'parent_info', 'url_fragment', 'custom_page', 'page_type_note', 'content', 'visibility_heading', 'state', 'state_action', 'nav_display', 'indexable','metadata_heading', 'author', 'description', 'keywords', 'administrator_section_heading', 'extra_head_content_structured', 'extra_head_content', 'unique_name');
+		$fields = array('title_heading', 'name', 'link_name', 'parent_id', 'parent_info', 'url_fragment', 'content_heading', 'custom_page', 'page_type_note', 'content', 'visibility_heading', 'state', 'state_action', 'nav_display', 'indexable','metadata_heading', 'author', 'description', 'keywords', 'administrator_section_heading', 'extra_head_content_structured', 'extra_head_content', 'unique_name');
 		
 		parent::alter_data();
+		
+		$this->add_element('title_heading', 'comment', array('text' => '<h4>Title &amp; Location</h4>'));
+		
+		$this->add_element('content_heading', 'comment', array('text' => '<h4>Content</h4>'));
+		
 		$this->_no_tidy[] = 'url_fragment';
 		$this->_no_tidy[] = 'custom_page';
 		$this->_no_tidy[] = 'extra_head_content';
@@ -256,11 +277,57 @@ class MinisitePageManager extends parent_childManager
 				$this->add_comments('extra_head_content',form_comment('If you need to add headers that are not simple css or javascript, enter raw HTML header markup here.'));
 			}
 			
-			$this->alter_page_type_section();
+			//$this->alter_page_type_section();
 			
 			// for admin users
-			$rpts =& get_reason_page_types();
+			$rpts = get_reason_page_types();
+			
+			$sidebar = $rpts->get_page_type('audio_video_sidebar');
+			$sidebar->meta('type', 'variation');
+			$sidebar->meta('visible', true);
+			$sidebar->meta('parent', 'audio_video');
+			$sidebar->meta('description', 'Lists media in the sidebar');
+			
+			$page_types = pageTypeEntities::entities();
+			$show_names = false;
+			
+			$availability = array();
+			$definitions = array();
 			if(reason_user_has_privs( $this->admin_page->user_id, 'assign_any_page_type'))
+			{
+				$show_names = true;
+				foreach($page_types as $pt_name => $pt)
+				{
+					$availability[$pt_name] = 'available';
+					$definitions[$pt_name] = '?site_id='.id_of('master_admin').'&amp;type_id='.id_of('page_type_type').'&amp;id='.$pt->id().'&amp;cur_module=Preview';
+				}
+			}
+			else
+			{
+				$user = new entity($this->admin_page->user_id);
+				$site = new entity($this->admin_page->site_id);
+				$page = new entity($this->get_value('id'));
+				foreach($page_types as $pt_name => $pt)
+				{
+					$availability[$pt_name] = pageTypeEntities::availability($pt, $user, $page);
+				}
+			}
+			
+			if(!$this->get_value('custom_page'))
+				$this->set_value('custom_page','default');
+			
+			$setup_array = array(
+				'hierarchy' => pageTypeEntities::hierarchy(),
+				'availability' => $availability,
+				'request_url' => $this->admin_page->make_link(array('cur_module'=>'RequestPageType')),
+				'deprecated' => $this->get_deprecated_page_types(),
+				'show_names' => $show_names,
+				'definition_urls' => $definitions,
+			);
+			$this->change_element_type('custom_page', 'page_type_picker', $setup_array);
+			
+			
+			/* if(reason_user_has_privs( $this->admin_page->user_id, 'assign_any_page_type'))
 			{
 				$options = array(''=>'--');
 				$pts = $rpts->get_page_types();
@@ -282,18 +349,13 @@ class MinisitePageManager extends parent_childManager
 					$this->change_element_type( 'custom_page' , 'radio_with_other_no_sort' , array( 'options' => $primary, 'other_options' => $options ) );
 				else
 					$this->change_element_type('custom_page' , 'select_no_sort', array( 'options' => $options ));
-				$this->set_comments( 'custom_page', form_comment('<a href="'.REASON_HTTP_BASE_PATH.'scripts/page_types/view_page_type_info.php">Page type definitions</a>.') );
 
-			}
-			
-			$page_type_for_note = $this->get_value('custom_page') ? $this->get_value('custom_page') : 'default';
-			if($pt = $rpts->get_page_type( $page_type_for_note ) )
+			} */
+			$page_type_entity = pageTypeEntities::entity($this->get_value('custom_page'));
+			if($page_type_entity && $page_type_entity->get_value('note'))
 			{
-				if($note = $pt->meta('note'))
-				{
-					$this->add_element('page_type_note','commentWithLabel',array('text'=>'<div class="note">'.$note.'</div>'));
-					$this->set_display_name('page_type_note', 'Note');
-				}
+				$this->add_element('page_type_note','commentWithLabel',array('text'=>'<div class="note">'.$page_type_entity->get_value('note').'</div>'));
+				$this->set_display_name('page_type_note', 'Note');
 			}
 			
 			$this->set_comments( 'name', form_comment('What should this page be called?') );
